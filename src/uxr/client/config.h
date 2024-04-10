@@ -16,9 +16,9 @@
 #define _UXR_CLIENT_CONFIG_H_
 
 #define UXR_CLIENT_VERSION_MAJOR 2
-#define UXR_CLIENT_VERSION_MINOR 1
+#define UXR_CLIENT_VERSION_MINOR 4
 #define UXR_CLIENT_VERSION_MICRO 0
-#define UXR_CLIENT_VERSION_STR "2.1.0"
+#define UXR_CLIENT_VERSION_STR "2.4.0"
 
 /* #undef UCLIENT_PROFILE_DISCOVERY */
 
@@ -67,5 +67,18 @@
 
 #define UCLIENT_TWEAK_XRCE_WRITE_LIMIT
 
+/* #undef UCLIENT_HARD_LIVELINESS_CHECK */
+
+#ifdef UCLIENT_HARD_LIVELINESS_CHECK
+#define UXR_CONFIG_HARD_LIVELINESS_CHECK_TIMEOUT_STR     "10000"
+#endif
+
+
+// Version checks
+#if UXR_CLIENT_VERSION_MAJOR >= 3
+#error UCLIENT_HARD_LIVELINESS_CHECK shall be included in session API
+#error MTU must be included in CREATE_CLIENT_Payload properties
+#error Reorder ObjectInfo https://github.com/eProsima/Micro-XRCE-DDS/issues/137
+#endif
 
 #endif // _UXR_CLIENT_CONFIG_H_

@@ -122,7 +122,7 @@ typedef void (* uxrOnRequestFunc) (
  * @param reply_id      Identifier of the reply.
  * @param ub            Serialized request data.
  * @param length        Length of the serialized data.
- * @param args		    User pointer data.
+ * @param args		User pointer data.
  */
 typedef void (* uxrOnReplyFunc) (
         struct uxrSession* session,
@@ -136,6 +136,7 @@ typedef void (* uxrOnReplyFunc) (
 /**
  * @brief Function signature used for flush_callback callbacks.
  * @param session   Session structure related to the buffer to be flushed.
+ * @param args	    Flush callback args pointer.
  */
 typedef bool (* uxrOnBuffersFull) (
         struct uxrSession* session,
@@ -161,6 +162,11 @@ typedef struct uxrContinuousArgs
     uxrStreamId stream_id;
     size_t data_size;
 } uxrContinuousArgs;
+
+typedef uint8_t pong_status_t;
+#define NO_PONG_STATUS 0x00
+#define PONG_IN_SESSION_STATUS 0x01
+#define PONG_NO_SESSION_STATUS 0x02
 
 /**
  * @nosubgrouping
@@ -193,7 +199,7 @@ typedef struct uxrSession
     void* on_reply_args;
 
     bool on_data_flag;
-    bool on_pong_flag;
+    pong_status_t on_pong_flag;
     uxrContinuousArgs continuous_args;
 
 #ifdef UCLIENT_PROFILE_MULTITHREAD

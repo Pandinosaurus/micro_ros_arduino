@@ -14,12 +14,14 @@ if [ $OPTIND -eq 1 ]; then
     PLATFORMS+=("teensy4")
     PLATFORMS+=("teensy32")
     PLATFORMS+=("teensy35")
+    PLATFORMS+=("teensy36")
     PLATFORMS+=("cortex_m0")
     PLATFORMS+=("cortex_m3")
     PLATFORMS+=("cortex_m4")
     # PLATFORMS+=("portenta-m4")
     PLATFORMS+=("portenta-m7")
     PLATFORMS+=("kakutef7-m7")
+    PLATFORMS+=("esp32")
 fi
 
 shift $((OPTIND-1))
@@ -51,11 +53,6 @@ pushd firmware/mcu_ws > /dev/null
     popd > /dev/null
 
 popd > /dev/null
-
-# Workaround. Remove when https://github.com/ros2/rosidl/pull/596 is merged
-touch firmware/mcu_ws/ros2/common_interfaces/actionlib_msgs/COLCON_IGNORE;
-touch firmware/mcu_ws/ros2/common_interfaces/std_srvs/COLCON_IGNORE;
-touch firmware/mcu_ws/ros2/example_interfaces/COLCON_IGNORE;
 
 ######## Clean and source ########
 find /project/src/ ! -name micro_ros_arduino.h ! -name *.c ! -name *.cpp ! -name *.c.in -delete
@@ -144,6 +141,25 @@ if [[ " ${PLATFORMS[@]} " =~ " teensy35 " ]]; then
     cp -R firmware/build/libmicroros.a /project/src/mk64fx512/fpv4-sp-d16-hard/libmicroros.a
 fi
 
+######## Build for Teensy 3.6 ########
+if [[ " ${PLATFORMS[@]} " =~ " teensy36 " ]]; then
+    rm -rf firmware/build
+    mkdir -p /project/src/mk66fx1m0/fpv4-sp-d16-hard
+
+    # Reuse Teensy 3.5 build if possible
+    if [[ " ${PLATFORMS[@]} " =~ " teensy35 " ]]; then
+        ln /project/src/mk64fx512/fpv4-sp-d16-hard/libmicroros.a /project/src/mk66fx1m0/fpv4-sp-d16-hard/libmicroros.a
+    else
+        export TOOLCHAIN_PREFIX=/uros_ws/gcc-arm-none-eabi-5_4-2016q3/bin/arm-none-eabi-
+        ros2 run micro_ros_setup build_firmware.sh /project/extras/library_generation/teensy35_toolchain.cmake /project/extras/library_generation/colcon_lowmem.meta
+
+        find firmware/build/include/ -name "*.c"  -delete
+        cp -R firmware/build/include/* /project/src/
+
+        cp -R firmware/build/libmicroros.a /project/src/mk66fx1m0/fpv4-sp-d16-hard/libmicroros.a
+    fi
+fi
+
 ######## Build for Teensy 4 ########
 if [[ " ${PLATFORMS[@]} " =~ " teensy4 " ]]; then
     rm -rf firmware/build
@@ -200,13 +216,31 @@ if [[ " ${PLATFORMS[@]} " =~ " kakutef7-m7 " ]]; then
     cp -R firmware/build/libmicroros.a /project/src/cortex-m7/fpv5-sp-d16-hardfp/libmicroros.a
 fi
 
+######## Build for ESP 32  ########
+if [[ " ${PLATFORMS[@]} " =~ " esp32 " ]]; then
+    rm -rf firmware/build
+
+    export TOOLCHAIN_PREFIX=/uros_ws/xtensa-esp32-elf/bin/xtensa-esp32-elf-
+    ros2 run micro_ros_setup build_firmware.sh /project/extras/library_generation/esp32_toolchain.cmake /project/extras/library_generation/colcon.meta
+
+    find firmware/build/include/ -name "*.c"  -delete
+    cp -R firmware/build/include/* /project/src/
+
+    mkdir -p /project/src/esp32
+    cp -R firmware/build/libmicroros.a /project/src/esp32/libmicroros.a
+fi
+
 ######## Generate extra files ########
 find firmware/mcu_ws/ros2 \( -name "*.srv" -o -name "*.msg" -o -name "*.action" \) | awk -F"/" '{print $(NF-2)"/"$NF}' > /project/available_ros2_types
 find firmware/mcu_ws/extra_packages \( -name "*.srv" -o -name "*.msg" -o -name "*.action" \) | awk -F"/" '{print $(NF-2)"/"$NF}' >> /project/available_ros2_types
+# sort it so that the result order is reproducible
+sort -o /project/available_ros2_types /project/available_ros2_types
 
 cd firmware
 echo "" > /project/built_packages
 for f in $(find $(pwd) -name .git -type d); do pushd $f > /dev/null; echo $(git config --get remote.origin.url) $(git rev-parse HEAD) >> /project/built_packages; popd > /dev/null; done;
+# sort it so that the result order is reproducible
+sort -o /project/built_packages /project/built_packages
 
 ######## Fix permissions ########
 sudo chmod -R 777 .
